@@ -1,0 +1,7 @@
+text,label,source_dataset
+Stocks rallied after the company reported stronger earnings than expected,positive,sample
+The bank warned about a possible slowdown in credit demand,negative,sample
+The company maintained its annual forecast during the investor call,neutral,sample
+Shares fell after the firm missed revenue expectations,negative,sample
+Analysts upgraded the stock because margins improved,positive,sample
+The central bank left interest rates unchanged,neutral,sample

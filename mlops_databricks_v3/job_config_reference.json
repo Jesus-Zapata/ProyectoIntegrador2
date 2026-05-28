@@ -1,0 +1,166 @@
+{
+  "name": "PI2_DataOps_MLOps_Financial_Sentiment_Free_Edition",
+  "description": "Pipeline secuencial para descarga automática HF/Kaggle a Parquet en UC Volume, Bronze/Silver/Gold, entrenamiento/evaluación MLflow, promoción por alias Champion y batch inference.",
+  "tasks": [
+    {
+      "task_key": "00_bootstrap_uc",
+      "notebook_task": {
+        "notebook_path": "/Workspace/Shared/ProyectoIntegrador2/mlops_databricks_v3/00_bootstrap_uc",
+        "base_parameters": {
+          "catalog": "workspace",
+          "schema": "financial_sentiment",
+          "volume": "raw_landing",
+          "project_name": "financial_sentiment_mlops"
+        }
+      }
+    },
+    {
+      "task_key": "01_download_source_parquets",
+      "depends_on": [
+        {
+          "task_key": "00_bootstrap_uc"
+        }
+      ],
+      "notebook_task": {
+        "notebook_path": "/Workspace/Shared/ProyectoIntegrador2/mlops_databricks_v3/01_download_source_parquets",
+        "base_parameters": {
+          "catalog": "workspace",
+          "schema": "financial_sentiment",
+          "volume": "raw_landing",
+          "enable_huggingface": "true",
+          "enable_kaggle": "true",
+          "force_refresh": "false",
+          "fail_if_no_sources": "true",
+          "fail_if_any_source_fails": "false",
+          "kaggle_username": "",
+          "kaggle_key": "",
+          "hf_token": ""
+        }
+      }
+    },
+    {
+      "task_key": "02_bronze_ingestion",
+      "depends_on": [
+        {
+          "task_key": "01_download_source_parquets"
+        }
+      ],
+      "notebook_task": {
+        "notebook_path": "/Workspace/Shared/ProyectoIntegrador2/mlops_databricks_v3/02_bronze_ingestion",
+        "base_parameters": {
+          "catalog": "workspace",
+          "schema": "financial_sentiment",
+          "volume": "raw_landing",
+          "source_mode": "canonical_parquet",
+          "create_demo_if_empty": "false"
+        }
+      }
+    },
+    {
+      "task_key": "03_silver_transform",
+      "depends_on": [
+        {
+          "task_key": "02_bronze_ingestion"
+        }
+      ],
+      "notebook_task": {
+        "notebook_path": "/Workspace/Shared/ProyectoIntegrador2/mlops_databricks_v3/03_silver_transform",
+        "base_parameters": {
+          "catalog": "workspace",
+          "schema": "financial_sentiment"
+        }
+      }
+    },
+    {
+      "task_key": "04_gold_training_dataset",
+      "depends_on": [
+        {
+          "task_key": "03_silver_transform"
+        }
+      ],
+      "notebook_task": {
+        "notebook_path": "/Workspace/Shared/ProyectoIntegrador2/mlops_databricks_v3/04_gold_training_dataset",
+        "base_parameters": {
+          "catalog": "workspace",
+          "schema": "financial_sentiment"
+        }
+      }
+    },
+    {
+      "task_key": "05_train_top3_models_mlflow",
+      "depends_on": [
+        {
+          "task_key": "04_gold_training_dataset"
+        }
+      ],
+      "notebook_task": {
+        "notebook_path": "/Workspace/Shared/ProyectoIntegrador2/mlops_databricks_v3/05_train_top3_models_mlflow",
+        "base_parameters": {
+          "catalog": "workspace",
+          "schema": "financial_sentiment",
+          "experiment_name": "/Shared/financial_sentiment_mlops",
+          "registered_model_basename": "financial_sentiment_champion",
+          "max_eval_rows_per_class": "75",
+          "max_train_rows_per_class": "75",
+          "finetune_epochs": "1",
+          "training_mode": "finetune_small",
+          "allow_sklearn_fallback": "true"
+        }
+      }
+    },
+    {
+      "task_key": "06_promote_model",
+      "depends_on": [
+        {
+          "task_key": "05_train_top3_models_mlflow"
+        }
+      ],
+      "notebook_task": {
+        "notebook_path": "/Workspace/Shared/ProyectoIntegrador2/mlops_databricks_v3/06_promote_model",
+        "base_parameters": {
+          "catalog": "workspace",
+          "schema": "financial_sentiment",
+          "registered_model_basename": "financial_sentiment_champion",
+          "metric_to_optimize": "macro_f1"
+        }
+      }
+    },
+    {
+      "task_key": "07_batch_inference",
+      "depends_on": [
+        {
+          "task_key": "06_promote_model"
+        }
+      ],
+      "notebook_task": {
+        "notebook_path": "/Workspace/Shared/ProyectoIntegrador2/mlops_databricks_v3/07_batch_inference",
+        "base_parameters": {
+          "catalog": "workspace",
+          "schema": "financial_sentiment",
+          "registered_model_basename": "financial_sentiment_champion",
+          "model_alias": "Champion"
+        }
+      }
+    },
+    {
+      "task_key": "08_pipeline_evidence",
+      "depends_on": [
+        {
+          "task_key": "07_batch_inference"
+        }
+      ],
+      "notebook_task": {
+        "notebook_path": "/Workspace/Shared/ProyectoIntegrador2/mlops_databricks_v3/08_pipeline_evidence",
+        "base_parameters": {
+          "catalog": "workspace",
+          "schema": "financial_sentiment"
+        }
+      }
+    }
+  ],
+  "schedule": {
+    "quartz_cron_expression": "0 0 8 ? * MON *",
+    "timezone_id": "America/Bogota",
+    "pause_status": "PAUSED"
+  }
+}
